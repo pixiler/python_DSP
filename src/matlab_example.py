@@ -19,7 +19,7 @@ def sine_wave(frequency: float, duration: float, sample_rate: int) -> np.ndarray
     return np.sin(2 * np.pi * frequency * t)
 
 
-def plot_signal(axes: plt.Axes, signal: np.ndarray, sample_rate: int, frequency: float, nSines: int) -> None:
+def plot_signal(axes: plt.Axes, signal: np.ndarray, sample_rate: int, frequency: float, nSines: int = 1, label: str = None) -> None:
     """
     Plots the given signal.
 
@@ -28,10 +28,12 @@ def plot_signal(axes: plt.Axes, signal: np.ndarray, sample_rate: int, frequency:
         signal (np.ndarray): The signal to be plotted.
         sample_rate (int): Sampling rate in samples per second.
         frequency (float): Frequency of the sine wave in Hz.
-        nSines (int): The number of sine waves to display.
+        nSines (int, optional): The number of sine waves to display.
+        label (str, optional): The label for the plot. 
     """
     t = np.arange(len(signal)) / sample_rate
-    axes.plot(t, signal, '.-')
+    axes.plot(t, signal, '.-', label=label)
+    axes.legend()
     axes.set_xlim(0, nSines/frequency)  # Show one period of the sine wave
     axes.set_title(f"Sine Wave Signal ({frequency} Hz)")
     axes.set_xlabel("Time [s]")
@@ -52,38 +54,39 @@ def fir1(N: int, Wn: float) -> np.ndarray:
     N = N + 1 if N % 2 == 0 else N  # Ensure N is odd for symmetry
     return signal.firwin(N, Wn)
 
-def freqz(h: np.ndarray, worN: int, fs: int) -> tuple:
+def freqz(axes: plt.Axes, b: np.ndarray, a: np.ndarray = 1, worN: int = 1024, fs: int = 2, label: str = None) -> tuple:
     """
     Computes the frequency response of a digital filter.
 
     Args:
-        h (np.ndarray): The filter coefficients.
+        axes (plt.Axes): The axes on which to plot the spectrum.
+        b (np.ndarray): Numerator of a linear filter.
+        a (np.ndarray): Denominator of a linear filter.
         worN (int): The number of frequency points to compute.
         fs (int): The sampling frequency.
 
     Returns:
         tuple: A tuple containing the frequencies and the frequency response.
     """
-    w, h_freq = signal.freqz(h, worN=worN, fs=fs)
+    w, h_freq = signal.freqz(b, a, worN=worN, fs=fs)
 
     mag_db = 20 * np.log10(np.abs(h_freq))
 
     cross_indices = np.diff(np.sign(mag_db - (-6)))  # Find the index where the magnitude response crosses -6 dB
     f_c = w[np.where(cross_indices)[0][0]] if np.any(cross_indices) else None # Find the cutoff frequency at -6 dB point
     
-    plt.figure(figsize=(10, 6))
-    plt.plot(w, mag_db, 'b')
+    # Kesim bulunduysa label'a ekle, bulunamadiysa label oldugu gibi kalsin
+    if f_c is not None and label is not None:
+        label = f"{label} (f_c = {f_c:.0f} Hz)"
+        
+    line, = axes.plot(w, mag_db, label=f'{label}')
     if f_c is not None:
-        plt.axvline(f_c, color='r', linestyle='--', label=f'Cutoff Frequency: {f_c:.2f} Hz')
-        plt.legend()
-        plt.annotate(f'Cutoff Frequency: {f_c:.2f} Hz', xy=(f_c, -6), xytext=(f_c + 1000, -20),
-                     arrowprops=dict(facecolor='black', shrink=0.05))
-        plt.plot(f_c, -6, 'ro')  # Mark the cutoff frequency point
-    plt.title("Frequency Response of the FIR Filter")
-    plt.xlabel("Frequency [Hz]")
-    plt.ylabel("Magnitude [dB]")
-    plt.grid()
-    plt.show()
+        axes.axvline(f_c, color=line.get_color(), linestyle='--', alpha=0.3)
+        axes.plot(f_c, -6, 'ro')  # Mark the cutoff frequency point
+    axes.set_xlabel("Frequency [Hz]")
+    axes.set_ylabel("Magnitude [dB]")
+    axes.grid(True)
+    axes.legend()
 
     return w, h_freq
 
@@ -116,6 +119,7 @@ def fir_filter(input_signal: np.ndarray, h: np.ndarray) -> np.ndarray:
         np.ndarray: The filtered signal.
     """
     return signal.lfilter(h, 1.0, input_signal)
+
 
 def plot_spectrum(axes: plt.Axes, signal: np.ndarray, sample_rate: int, label: str = None, xscale: str = 'linear') -> None:
     """

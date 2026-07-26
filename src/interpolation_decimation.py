@@ -48,7 +48,7 @@ def interpolate(signal: np.ndarray, Fs: int, factor: int) -> tuple[np.ndarray, n
 
     y_zs = up_sample(signal, factor)
     Fs_new = factor * Fs
-    b_i = factor * fir1(64, (len(signal)/2) / (Fs_new / 2))
+    b_i = factor * fir1(64, Fs/2 / (Fs_new / 2))
     y_up = fir_filter(y_zs, b_i)
     return y_up, y_zs, Fs_new
 
