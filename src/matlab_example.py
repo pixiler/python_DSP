@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as signal
+from matplotlib.axes import Axes
+from typing import Any, cast
 
 def sine_wave(frequency: float, duration: float, sample_rate: int) -> np.ndarray:
     """
@@ -19,20 +21,23 @@ def sine_wave(frequency: float, duration: float, sample_rate: int) -> np.ndarray
     return np.sin(2 * np.pi * frequency * t)
 
 
-def plot_signal(axes: plt.Axes, signal: np.ndarray, sample_rate: int, frequency: float, nSines: int = 1, label: str = None) -> None:
+def plot_signal(axes: Axes, signal: np.ndarray, sample_rate: int, frequency: float, nSines: int = 1, label: str | None = None) -> None:
     """
     Plots the given signal.
 
     Args:
-        axes (plt.Axes): The axes on which to plot the signal.
+        axes (Axes): The axes on which to plot the signal.
         signal (np.ndarray): The signal to be plotted.
         sample_rate (int): Sampling rate in samples per second.
         frequency (float): Frequency of the sine wave in Hz.
         nSines (int, optional): The number of sine waves to display.
-        label (str, optional): The label for the plot. 
+        label (str | None, optional): The label for the plot.
     """
     t = np.arange(len(signal)) / sample_rate
-    axes.plot(t, signal, '.-', label=label)
+    if label is not None:
+        axes.plot(t, signal, '.-', label=label)
+    else:
+        axes.plot(t, signal, '.-')
     axes.legend()
     axes.set_xlim(0, nSines/frequency)  # Show one period of the sine wave
     axes.set_title(f"Sine Wave Signal ({frequency} Hz)")
@@ -52,34 +57,41 @@ def fir1(N: int, Wn: float) -> np.ndarray:
         np.ndarray: The filter coefficients.
     """
     N = N + 1 if N % 2 == 0 else N  # Ensure N is odd for symmetry
-    return signal.firwin(N, Wn)
+    return cast(np.ndarray, signal.firwin(N, Wn))
 
-def freqz(axes: plt.Axes, b: np.ndarray, a: np.ndarray = 1, worN: int = 1024, fs: int = 2, label: str = None) -> tuple:
+def freqz(b: np.ndarray, worN: int = 1024, fs: float = 2.0, a: np.ndarray | float = 1.0, label: str | None = None, axes: Axes | None = None) -> tuple[np.ndarray, np.ndarray]:
     """
-    Computes the frequency response of a digital filter.
+    Computes and plots the frequency response of a digital filter.
 
     Args:
-        axes (plt.Axes): The axes on which to plot the spectrum.
         b (np.ndarray): Numerator of a linear filter.
-        a (np.ndarray): Denominator of a linear filter.
         worN (int): The number of frequency points to compute.
-        fs (int): The sampling frequency.
+        fs (float): The sampling frequency.
+        a (np.ndarray | float, optional): Denominator of a linear filter.
+        label (str | None, optional): Plot label.
+        axes (Axes | None, optional): Axes object to plot on. If None, a new figure is created.
 
     Returns:
-        tuple: A tuple containing the frequencies and the frequency response.
+        tuple[np.ndarray, np.ndarray]: Frequencies and the frequency response.
     """
-    w, h_freq = signal.freqz(b, a, worN=worN, fs=fs)
+    if axes is None:
+        fig, axes = plt.subplots(figsize=(10, 6))
+
+    w, h_freq = cast(tuple[np.ndarray, np.ndarray], signal.freqz(b, cast(Any, a), worN=worN, fs=fs))
 
     mag_db = 20 * np.log10(np.abs(h_freq))
 
     cross_indices = np.diff(np.sign(mag_db - (-6)))  # Find the index where the magnitude response crosses -6 dB
-    f_c = w[np.where(cross_indices)[0][0]] if np.any(cross_indices) else None # Find the cutoff frequency at -6 dB point
+    f_c = cast(float, w[np.where(cross_indices)[0][0]]) if np.any(cross_indices) else None # Find the cutoff frequency at -6 dB point
     
     # Kesim bulunduysa label'a ekle, bulunamadiysa label oldugu gibi kalsin
     if f_c is not None and label is not None:
         label = f"{label} (f_c = {f_c:.0f} Hz)"
         
-    line, = axes.plot(w, mag_db, label=f'{label}')
+    if label is not None:
+        line, = axes.plot(w, mag_db, label=label)
+    else:
+        line, = axes.plot(w, mag_db)
     if f_c is not None:
         axes.axvline(f_c, color=line.get_color(), linestyle='--', alpha=0.3)
         axes.plot(f_c, -6, 'ro')  # Mark the cutoff frequency point
@@ -118,27 +130,33 @@ def fir_filter(input_signal: np.ndarray, h: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: The filtered signal.
     """
-    return signal.lfilter(h, 1.0, input_signal)
+    return cast(np.ndarray, signal.lfilter(h, 1.0, input_signal))
 
 
-def plot_spectrum(axes: plt.Axes, signal: np.ndarray, sample_rate: int, label: str = None, xscale: str = 'linear') -> None:
+def plot_spectrum(axes: Axes, signal: np.ndarray, sample_rate: int, label: str | None = None, xscale: str = 'linear') -> None:
     """
     Plots the magnitude spectrum of a signal.
 
     Args:
-        axes (plt.Axes): The axes on which to plot the spectrum.
+        axes (Axes): The axes on which to plot the spectrum.
         signal (np.ndarray): The input signal.
         sample_rate (int): The sampling rate in samples per second.
-        label (str, optional): The label for the plot.
+        label (str | None, optional): The label for the plot.
         xscale (str, optional): xscale for the plot.
     """
     fft_values, f = fft(signal, sample_rate)
     magnitude = np.abs(fft_values)
 
     if xscale == 'log':
-        axes.plot(f[len(f)//2+1:], magnitude[len(magnitude)//2+1:], label = label)
-    else :
-        axes.plot(f, magnitude, label = label)
+        if label is not None:
+            axes.plot(f[len(f)//2+1:], magnitude[len(magnitude)//2+1:], label=label)
+        else:
+            axes.plot(f[len(f)//2+1:], magnitude[len(magnitude)//2+1:])
+    else:
+        if label is not None:
+            axes.plot(f, magnitude, label=label)
+        else:
+            axes.plot(f, magnitude)
     
     axes.legend()
     axes.set_title("Magnitude Spectrum")
@@ -152,7 +170,7 @@ def main() -> None:
 
     fc_1 : float = 2e3
     fc_2 : float = 10e3
-    Fs : int = 50e3
+    Fs : int = int(50e3)
     t : float = 0.1
 
     print(f"fc_1: {fc_1}, fc_2: {fc_2}, Fs: {Fs}")

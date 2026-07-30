@@ -75,7 +75,7 @@ def decimate(signal: np.ndarray, Fs: int, factor: int) -> tuple[np.ndarray, np.n
 def main() -> None:
     m: int = 2
     fc : float = 2e3
-    Fs : int = 50e3
+    Fs : int = int(50e3)
     t : float = 0.1
     y1 = sine_wave(fc, t, Fs)
     plt.figure(figsize=(10, 4))
