@@ -20,3 +20,8 @@ def test_add_awgn_olculen_snr_hedefe_yakin(test_sinyali, rng, snr_db):
 def test_add_awgn_sifir_db_de_gurultu_gucu_sinyale_esit(test_sinyali, rng):
     _, noise = add_awgn(test_sinyali, snr_db=0.0, rng=rng)
     assert np.mean(noise**2) == pytest.approx(np.mean(test_sinyali**2), rel=0.05)
+
+def test_add_awgn_rng_verilmezse_her_cagri_farkli(test_sinyali):
+    _, n1 = add_awgn(test_sinyali, 10.0)
+    _, n2 = add_awgn(test_sinyali, 10.0)
+    assert not np.array_equal(n1, n2)

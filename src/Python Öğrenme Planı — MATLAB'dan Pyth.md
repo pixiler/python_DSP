@@ -258,31 +258,118 @@ gecikme ölçümü, `group_delay`.
 
 ---
 
-## Hafta 5 — Profesyonel Python Alışkanlıkları ⏳ Sırada
+## Hafta 5 — Profesyonel Python Alışkanlıkları ✅ Tamamlandı
 
-**Konular:** paket yapısı (`__init__.py`), `pytest` ile birim test,
-`pytest.approx` ve `np.testing`, `parametrize`, `fixture`, tekrarlanabilir
-rastgelelik (`default_rng(seed)`), temel OOP.
+**Konular:** paket yapısı (`__init__.py`, göreli import), `pytest`,
+`pytest.approx` ve `np.testing`, `parametrize`, `fixture`, `pytest.raises`,
+tekrarlanabilir rastgelelik (`default_rng`), `dataclass`, temel OOP,
+kapsam ölçümü (`pytest-cov`).
 
-> Pytest burada özellikle önemli, çünkü VUnit'in test mantığına zihinsel
-> hazırlık sağlıyor. Ayrıca Hafta 2–4'te bulduğumuz hataların **çoğu**
-> tek satırlık assert'lerle yakalanabilirdi — bu haftanın motivasyonu
-> doğrudan o hata listesi.
+**Görev 5 — Paket yapısı ve test seti (`hafta5_gorev5_pytest.md`):**
 
-**Görev 5:** Detaylar `hafta5_gorev5_pytest.md` dosyasında.
+1. **Isınma:** 5'te 5 doğru istikamet, ama ikisi yarımdı ve haftanın
+   asıl konusu o yarımlardan çıktı:
+   - Float karşılaştırma (`0.1+0.2 != 0.3`) ve dizi karşılaştırması
+     (`ValueError: truth value ambiguous`) doğru bilindi. Eklenen:
+     tek elemanlı dizide aynı hata **patlamaz**, sessizce çalışır.
+   - Seed'in fonksiyon içine etki edip etmediği deneyle bulundu.
+     Ortaya çıkan zihin modeli düzeltmesi: seed bir "değer" değil,
+     **global bir imlecin başlangıç noktası**; her `normal()` çağrısı
+     imleci ilerletir. İki `seed(42)` → aynı gürültü; tek `seed(42)` +
+     iki çağrı → farklı gürültü.
+
+2. **Paket yapısı (`dsp/`):** `signals.py`, `filters.py`, `analysis.py`,
+   `resampling.py`, `plotting.py` + açık listeli `__init__.py`.
+   `freqz` üçe bölündü: `frequency_response` (hesap, `filters.py`),
+   `find_cutoff` (analiz, `analysis.py`), `plot_frequency_response`
+   (çizim, `plotting.py`). Çizim fonksiyonlarında **hiç hesap kalmadı**;
+   kontrol sorusu: *"bu çizim fonksiyonunu silsem hangi sayı kaybolur?"*
+   → "hiçbiri" olmalı.
+
+3. **Test seti (~30 test, 4 dosya + `conftest.py` + `helpers.py`):**
+   `pytest.ini` ile `-v --strict-markers` sabitlendi. Kapsam:
+   `plotting.py` dışında **%100** (`plotting` bilinçli olarak test dışı).
+
+   **Kırmızı-yeşil döngüsü fiilen yaşandı:** `interpolate`'in kesim
+   frekansı hatası bilerek yerinde bırakıldı, uzunluk bağımsızlığı testi
+   yazıldı, **testin kaldığı görüldü** (RMS 0,506 vs 0,653), sonra
+   `Fs/2` düzeltmesiyle geçtiği görüldü. Bu döngü olmadan bir testin
+   gerçekten bir şey ölçtüğü kanıtlanamaz.
+
+   **Yolda bulunup düzeltilen gerçek hatalar:**
+   - `__init__.py`'de `import *` — `np`, `scipy.signal`, `cast`, `Axes`
+     paketin genel arayüzüne sızdı. `dsp.signal` (scipy) ile
+     `dsp.signals` (kendi modülü) **bir harf farkla** yan yana geldi:
+     Hafta 2'deki isim gölgeleme tuzağının paket seviyesindeki hali.
+   - `group_delay_samples` içinde `len(b) - 1 // 2` — operatör önceliği;
+     `//` önce çalışıp 65 döndürdü, 32 yerine. Test edilmeyen property
+     olduğu için ilk turda fark edilmedi.
+   - `order=64` ile IIR kurulması — 64 kutuplu Butterworth `b, a`
+     formunda **sayısal olarak çöküyor** (NaN + "denominator extremely
+     small" uyarısı). IIR'de derece düşük olur; yüksek derece gerekirse
+     SOS formu (`output='sos'` + `sosfilt`) kullanılır.
+   - **Hiçbir şey ölçmeyen iki test:** `rms(y) <= 40` ve `rms(y) <= 1`
+     — `rms` lineer genlik döndürüyor (sinüs için 0,707), iddialar her
+     zaman doğru. Zayıflatmayı **oran alıp dB'ye çevirerek** ölçmek
+     gerekiyordu.
+   - `assert np.testing.assert_allclose(...)` — bu fonksiyon `None`
+     döndürür, `assert None` **her zaman kalır**. `assert_allclose` tek
+     başına çağrılır.
+   - `fir1(64, 2e3/Fs)` — `Wn` **Nyquist'e** göre normalize edilir,
+     `Fs`'e göre değil. İki kat sessiz sapma.
+   - `zayiflatma_db <= 1` (bant içi) — işaret yönü ters; doğrusu
+     `>= -1`. İki testte farklı işaret konvansiyonu kullanılmıştı.
+   - `fft()` tuple döndürürken tek değişkene atanması → `np.max` frekans
+     eksenini ölçtü (`24990+0j`). Aynı turda: `argmax` indeks döndürür
+     (frekans değil), karmaşık dizide `max` anlamsız.
+   - Parseval'de fazladan `/N` — `Y = X/N` normalizasyonu zaten yapıldığı
+     için frekans tarafında **toplam** alınır, ortalama değil.
+   - `decimate` uzunluğu: `signal[::3]` 5000 örnek için **1667** verir,
+     `5000//3 = 1666` değil. `parametrize` sayesinde ortaya çıktı —
+     tek değerle test edilseydi görünmezdi.
+   - Butterworth kesim tanımı: `Wn` **−3 dB** noktasıdır, −6 dB değil.
+     Gevşek tolerans (`rel=0.2`) yanlış beklentiyi örtmüştü.
+   - `argmax` beraberlikte ilk indeksi döndürür; `|Y(-f)| = |Y(f)|`
+     olduğu için fftshift'li dizide **negatif** frekans kazanıyor.
+     (Bu tespit eren tarafından yapıldı.)
+
+4. **Tasarım kararları:**
+   - `add_awgn(signal, snr_db, rng=None)` — `np.random.seed()`'i içeri
+     koymak gizli **çıktı** yaratırdı (global durumu ezer); varsayılan
+     `seed=42` ise döngüde her iterasyona aynı gürültüyü verirdi.
+     `rng` nesnesi geçmek hem tekrarlanabilir hem de döngüde bağımsız.
+   - `interpolate` → `InterpolationResult` **dataclass**'ı (alanlar:
+     `signal`, `zero_stuffed`, `fs`, `group_delay`). Dörtlü tuple'ın
+     sıra riskini ortadan kaldırdı; `group_delay` `b_i`'den hesaplanıyor,
+     elle yazılmıyor. Test artık transient uzunluğunu **tahmin etmiyor**,
+     fonksiyonun bildirdiği değeri kullanıyor.
+   - `LowPassFilter` sınıfı — `cutoff_hz`/`fs` normalizasyonunu tek yerde
+     yapıyor, `kind` doğrulaması `ValueError` fırlatıyor.
+     `group_delay_samples` (FIR, tek sayı) ile `group_delay_at(freq_hz)`
+     (IIR, frekansa bağlı) **ayrı** tutuldu: IIR'de lineer faz olmadığı
+     için tek bir sayı yanlış bilgi olurdu.
+
+5. **Bonuslar:** `pytest-cov` (kör nokta bulucu olarak, hedef sayı
+   olarak değil), `pytest.ini`, regresyon testleri.
 
 ---
 
-## Hafta 6 — VUnit'e Giriş
+## Hafta 6 — VUnit'e Giriş ⏳ Sırada
 
-**Konular:** VUnit kurulumu, `run.py` yapısı, VHDL testbench'lerini
-VUnit ile organize etme, `check` kütüphanesi, Python tarafından test
-verisi üretip dosya üzerinden VHDL'e besleme.
+**Konular:** simülatör kurulumu (GHDL/NVC), VUnit kurulumu, `run.py`
+yapısı, VHDL testbench'lerini VUnit ile organize etme, `check`
+kütüphanesi, Python tarafından test verisi üretip dosya üzerinden
+VHDL'e besleme.
 
-**Görev 6 (final projesi):** Basit bir VHDL modülü (örn. sayaç veya FIR
-filtre) için VUnit testbench'i kurmak. Test vektörlerini NumPy ile
-üretmek, CSV'ye yazmak, VHDL'de okumak ve çıkışı Python'da doğrulamak.
-Önceki 5 haftanın hepsini birleştiren kapanış görevi.
+> Hafta 5'in tüm kavramları burada karşılığını buluyor: `run.py`
+> ≈ `conftest.py`, `check_equal` ≈ `assert`, VUnit test seçimi
+> ≈ `pytest -k`, `dsp/` paketi ≈ test vektörü üreteci. Tolerans
+> tablosu (aşağıda) doğrudan kullanılacak.
+
+**Görev 6 (final projesi):** Detaylar `hafta6_gorev6_vunit.md`
+dosyasında. Basit bir VHDL modülü (sayaç → FIR filtre) için VUnit
+testbench'i kurmak; test vektörlerini `dsp/` ile üretmek, CSV'ye
+yazmak, VHDL'de okumak ve çıkışı Python'da doğrulamak.
 
 ---
 
@@ -295,7 +382,33 @@ filtre) için VUnit testbench'i kurmak. Test vektörlerini NumPy ile
 - Her hafta sonunda kod + kısa notlar paylaşılıp birlikte gözden
   geçiriliyor.
 
-### Tekrar eden hata kalıpları (4 hafta boyunca biriken)
+- **Git commit disiplini (Hafta 5'te acı deneyimle öğrenildi):** dosyaların
+  eski bir sürümü geri yüklendi, göreli importlar ve iki düzeltme sessizce
+  kayboldu. Milestone'da commit atmak yerine **çalışır hale gelen her şey
+  için** commit at. Ölçüt: mesajda "ve" demek zorunda kalıyorsan commit
+  ikiye bölünmeliydi. Mesaj formülü: *"Bu commit uygulandığında kod şunu
+  yapacak: ___"* (emir kipi, tek satır).
+
+### Tolerans seçim tablosu (Hafta 5'ten, Hafta 6'da da geçerli)
+
+Tolerans keyfi bir sayı değil, **hata kaynağından türetilir.** "Geçsin
+diye" seçilen tolerans yanlış beklentiyi örter (Butterworth −3/−6 dB
+karışıklığı `rel=0.2` yüzünden fark edilmemişti).
+
+| Hata kaynağı | Tolerans | Örnek |
+|---|---|---|
+| Float aritmetiği (özdeşlikler) | `rel=1e-9` … `1e-12` | Parseval |
+| Sonlu örnekleme (istatistik) | √(2/N)'den hesapla | SNR ölçümü: ~0,09 dB |
+| Izgara çözünürlüğü | `abs = Δf` veya `2Δf` | FFT tepesi, kesim frekansı |
+| Tamsayı yuvarlama | `abs=1` örnek | gecikme ölçümü |
+| Atanmış (hesaplanmamış) değerler | tolerans **yok**, `==` | `up_sample` sıfırları |
+
+**Logaritmik birimlerde (dB) tolerans her zaman mutlaktır** — dB zaten
+bağıl bir ölçek; `rel` kullanmak bağılın bağılını almak olur. Ayrıca
+beklenen değer sıfıra yakınsa `rel × 0 = 0` → sıfır tolerans; bu tuzağa
+Hafta 5'te **üç kez** düşüldü.
+
+### Tekrar eden hata kalıpları (5 hafta boyunca biriken)
 
 1. **İsim gölgeleme** — parametre adlarını import edilen modül adlarıyla
    çakıştırmamak (`signal`, `filter`, `welch`, `group_delay`).
@@ -314,3 +427,25 @@ filtre) için VUnit testbench'i kurmak. Test vektörlerini NumPy ile
    aşırı duyarlı.
 7. **Zaman tabanı kontrolü** — iki sinyali karşılaştırmadan önce
    refleks olarak `len()` ve `Fs` değerlerini yan yana koy.
+8. **`pytest.approx`'un ikinci pozisyonel argümanı `rel`'dir, `abs`
+   değil.** Hafta 5'te **dört kez** yapıldı. 3 numaralı kuralın kütüphane
+   fonksiyonlarına uyarlanmış hali: **`approx`'u asla pozisyonel çağırma**,
+   her zaman `abs=` veya `rel=` yaz.
+9. **Fonksiyonun ne döndürdüğünü kontrol etmemek** — `fft` tuple, `argmax`
+   indeks, `group_delay` dizi, `assert_allclose` `None` döndürür.
+   Refleks: assert yazmadan önce `print(type(x), np.shape(x), x[:3])`.
+10. **Operatör önceliği** — `len(b) - 1 // 2` ≠ `(len(b) - 1) // 2`.
+    Şüphe varsa parantez koy; okunabilirlik zaten kazanç.
+11. **Hiçbir şey ölçmeyen test** — her assert'ten sonra sor: *"bu iddia
+    hangi durumda kalır?"* Cevap "hiçbir durumda" ise test işe yaramıyor.
+    Kanıtlama yöntemi: koddaki bir şeyi bilerek boz, kırmızıyı gör
+    (mutasyon testi). Sadece **kaldığını gördüğün** bir test gerçekten
+    bir şey ölçtüğünü kanıtlar.
+12. **Test edilmeyen kod, çalıştığı varsayılan koddur** —
+    `group_delay_samples` hatası, property hiç çağrılmadığı için ilk
+    turda görünmedi. Kapsam raporu bunun için var; ama kapsam
+    **çalıştırılan satırı** ölçer, doğrulanan davranışı değil.
+13. **Bağımlılıkları imzaya taşı** — gizli girdi (global RNG durumu) ve
+    gizli çıktı (global durumu ezmek) test edilebilirliğin bir numaralı
+    düşmanı. Bir fonksiyona test yazmak zorlaşıyorsa sebep genellikle
+    testin değil, **tasarımın** kendisidir.
