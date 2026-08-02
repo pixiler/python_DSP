@@ -2,10 +2,10 @@ standard = "2008"
 
 [libraries]
 lib.files = [
-    'E:/WorkSpace/python/data_analysis/python_DSP/src/hdl/tb/tb_fir_filter.vhd',
-    'E:/WorkSpace/python/data_analysis/python_DSP/src/hdl/src/fir_filter.vhd',
-    'E:/WorkSpace/python/data_analysis/python_DSP/src/hdl/src/counter.vhd',
-    'E:/WorkSpace/python/data_analysis/python_DSP/src/hdl/tb/tb_counter.vhd',
+    'E:/WorkSpace/python/data_analysis/python_DSP/hdl/tb/tb_fir_filter.vhd',
+    'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/fir_filter.vhd',
+    'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/counter.vhd',
+    'E:/WorkSpace/python/data_analysis/python_DSP/hdl/tb/tb_counter.vhd',
 ]
 
 vunit_lib.files = [
