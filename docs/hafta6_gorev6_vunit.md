@@ -62,21 +62,25 @@ Bu tesadüf değil, projenin bel kemiği: test vektörlerini `dsp` üretecek.
 
 ### 3. Klasör yapısı
 
+Kuruldu — repo kökü artık şöyle:
+
 ```
-proje/
+python_DSP/
 ├── dsp/                    # Hafta 5'ten, dokunulmuyor
 ├── tests/                  # Hafta 5'ten, dokunulmuyor
 ├── hdl/
-│   ├── src/
-│   │   ├── counter.vhd
-│   │   └── fir_filter.vhd
-│   └── tb/
-│       ├── tb_counter.vhd
-│       └── tb_fir_filter.vhd
-├── vectors/                # üretilen CSV'ler (git'e ekleme, .gitignore)
-├── generate_vectors.py     # dsp/ kullanarak test verisi üretir
-└── run.py                  # VUnit giriş noktası
+│   ├── src/                # counter.vhd, fir_filter.vhd  ← sen yazacaksın
+│   └── tb/                 # tb_counter.vhd, tb_fir_filter.vhd
+├── vectors/                # üretilen CSV'ler (.gitignore'da)
+├── docs/                   # bu dosya + öğrenme planı + eski görevler
+├── weeks/                  # Hafta 1-4 script'leri (arşiv, dokunulmuyor)
+├── generate_vectors.py     # dsp/ kullanarak test verisi üretir (iskelet)
+├── run.py                  # VUnit giriş noktası
+└── pytest.ini
 ```
+
+Not: `run.py` `hdl/src` ve `hdl/tb` klasörleri boşken de çalışır —
+ilk `.vhd` dosyanı yazana kadar hata vermez, sadece hiç test bulamaz.
 
 ## Bölüm 1 — Isınma
 

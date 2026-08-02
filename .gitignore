@@ -179,3 +179,12 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# VUnit / HDL simulasyon ciktilari
+vunit_out/
+*.vcd
+*.fst
+*.ghw
+
+# Uretilen test vektorleri (generate_vectors.py ile yeniden uretilir)
+vectors/*.csv

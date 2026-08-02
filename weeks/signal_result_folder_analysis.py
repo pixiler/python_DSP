@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from analiz import ortalama, maximum, square
+
+DATA_DIR = Path(__file__).parent / "data"
 
 def read_file(file_path):
     """
@@ -25,7 +29,7 @@ def write_file(file_path, content):
         file.write(content)
 
 def main():
-    file_path = 'olcumler.txt'
+    file_path = DATA_DIR / 'olcumler.txt'
     content = read_file(file_path)
 
     split_content = content.splitlines()
@@ -64,7 +68,7 @@ def main():
     for kanal, degerler in dict_content.items():
         lines.append(f"{kanal}: ortalama={ortalama(degerler):.2f}, max={maximum(degerler)}")
     
-    write_file('sonuclar.txt', "\n".join(lines))
+    write_file(DATA_DIR / 'sonuclar.txt', "\n".join(lines))
 
 
 if __name__ == "__main__":
