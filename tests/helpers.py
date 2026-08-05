@@ -8,13 +8,14 @@ FS : float = 50e3
 FC : float = 1e3
 """Carrier frequency used by the helper routines in hertz."""
 
+DURATION = 0.1
 
-def rms(x: np.ndarray) -> float:
+def rms(signal: np.ndarray) -> float:
     """Return the root mean square (RMS) value of an array.
 
     Parameters
     ----------
-    x : numpy.ndarray
+    signal : numpy.ndarray
         Input signal samples.
 
     Returns
@@ -22,4 +23,9 @@ def rms(x: np.ndarray) -> float:
     float
         The RMS value of the input samples.
     """
-    return float(np.sqrt(np.mean(x**2)))
+    return float(np.sqrt(np.mean(signal**2)))
+
+# Eğer sinyallerde DC offset varsa:
+def ac_rms(signal: np.ndarray) -> float:
+    ac_signal = signal - np.mean(signal)
+    return float(np.sqrt(np.mean(ac_signal**2)))

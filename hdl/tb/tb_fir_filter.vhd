@@ -27,25 +27,23 @@ entity tb_fir_filter is
     expected_dc_csv : string
   );
 end entity tb_fir_filter;
-
-
 architecture bench of tb_fir_filter is
 
   constant C_DATA_WIDTH : natural := 16;
   constant C_COEF_WIDTH : natural := 16;
   constant C_PERIOD     : time    := 10 ns;
-  constant HOLD         : time    := 1 ns;   -- kenardan sonra okuma/surme gecikmesi
+  constant HOLD         : time    := 1 ns; -- kenardan sonra okuma/surme gecikmesi
 
-  constant DRAIN_CYCLES   : natural := 4;    -- besleme sonrasi bosaltma
-  constant IDLE_CYCLES    : natural := 5;    -- valid dusukken beklenen sure
-  constant MONITOR_CYCLES : natural := 5;    -- kac cevrim log basilacak
+  constant DRAIN_CYCLES   : natural := 4; -- besleme sonrasi bosaltma
+  constant IDLE_CYCLES    : natural := 5; -- valid dusukken beklenen sure
+  constant MONITOR_CYCLES : natural := 5; -- kac cevrim log basilacak
 
   constant Q15_MAX : integer := 2 ** (C_DATA_WIDTH - 1) - 1;
 
   signal clk : std_logic := '0';
   signal rst : std_logic := '1';
 
-  signal valid_in : std_logic := '0';
+  signal valid_in : std_logic                                   := '0';
   signal x_in     : std_logic_vector(C_DATA_WIDTH - 1 downto 0) := (others => '0');
 
   signal valid_out : std_logic;
@@ -60,16 +58,15 @@ begin
     clk <= '0';
     wait for C_PERIOD / 2;
   end process gen_clk;
-
-
   DUT : entity work.fir_filter
-    generic map (
+    generic map(
       DATA_WIDTH => C_DATA_WIDTH,
       COEF_WIDTH => C_COEF_WIDTH,
       NUM_TAPS   => FIR_NUM_TAPS,
       COEFFS     => FIR_COEFFS
     )
-    port map (
+    port map
+    (
       clk       => clk,
       rst       => rst,
       valid_in  => valid_in,
@@ -77,13 +74,12 @@ begin
       valid_out => valid_out,
       y_out     => y_out
     );
-
-
   main : process
     variable input_data    : integer_array_t;
     variable expected_data : integer_array_t;
     variable compared      : natural := 0;
     variable y_prev        : std_logic_vector(C_DATA_WIDTH - 1 downto 0);
+    variable captured      : integer_array_t;
 
     -- Reset uygula ve besleme icin temiz bir baslangic noktasi birak.
     -- valid_in reset boyunca dusuk tutulur; aksi halde DUT reset'ten cikarken
@@ -93,11 +89,12 @@ begin
       rst      <= '1';
       valid_in <= '0';
       x_in     <= (others => '0');
+      captured := new_1d(bit_width => C_DATA_WIDTH, is_signed => true);
       wait until rising_edge(clk);
       wait for HOLD;
 
       rst <= '0';
-      wait until rising_edge(clk);   -- reset birakildiktan sonra bir bos cevrim
+      wait until rising_edge(clk); -- reset birakildiktan sonra bir bos cevrim
       wait for HOLD;
 
       compared := 0;
@@ -107,11 +104,14 @@ begin
     procedure check_next_output is
     begin
       check_equal(
-        to_integer(signed(y_out)),
-        get(expected_data, compared),
-        "cikis beklenenden farkli, index=" & to_string(compared)
+      to_integer(signed(y_out)),
+      get(expected_data, compared),
+      "cikis beklenenden farkli, index=" & to_string(compared)
       );
       compared := compared + 1;
+
+      append(captured, to_integer(signed(y_out))); -- her gecerli cikista
+
     end procedure check_next_output;
 
     -- input_data[first..last] arasini besle, her gecerli cikisi karsilastir.
@@ -148,9 +148,9 @@ begin
     procedure check_all_compared is
     begin
       check_equal(
-        compared,
-        length(expected_data),
-        "beklenen sayida ornek karsilastirilmadi"
+      compared,
+      length(expected_data),
+      "beklenen sayida ornek karsilastirilmadi"
       );
     end procedure check_all_compared;
 
@@ -162,16 +162,17 @@ begin
       if run("cikis_ile_beklenen_ayni") then
         -- Referans bit-birebir oldugu icin tolerans yok: yuvarlama modunu
         -- bozan her degisiklik burada kirmizi verir.
-        input_data    := load_csv(input_csv,    bit_width => C_DATA_WIDTH);
+        input_data    := load_csv(input_csv, bit_width    => C_DATA_WIDTH);
         expected_data := load_csv(expected_csv, bit_width => C_DATA_WIDTH);
 
         reset_dut;
         feed_range(0, length(input_data) - 1);
         drain;
         check_all_compared;
+        save_csv(captured, output_path(runner_cfg) & "output.csv");
 
       elsif run("valid_dusukken_filtre_durur") then
-        input_data    := load_csv(input_csv,    bit_width => C_DATA_WIDTH);
+        input_data    := load_csv(input_csv, bit_width    => C_DATA_WIDTH);
         expected_data := load_csv(expected_csv, bit_width => C_DATA_WIDTH);
 
         reset_dut;
@@ -180,7 +181,7 @@ begin
         -- Besleme kesilince cikis dondurulmali. x_in ayni kalir; DUT valid_in'i
         -- yok sayiyor olsaydi ayni ornegi tekrar tekrar isler ve cikis degisirdi.
         valid_in <= '0';
-        y_prev   := y_out;
+        y_prev := y_out;
         for i in 1 to IDLE_CYCLES loop
           wait until rising_edge(clk);
           wait for HOLD;
@@ -192,24 +193,26 @@ begin
         feed_range(11, length(input_data) - 1);
         drain;
         check_all_compared;
+        save_csv(captured, output_path(runner_cfg) & "output.csv");
 
       elsif run("tam_olcek_dc_de_doyar") then
         -- Katsayi yuvarlamasi yuzunden DC kazanci 1'in bir tik ustunde
         -- (sum(h) = 32769). Tam olcek DC girisi bu yuzden cikista tasar ve
         -- doygunluk dalini calistirir -- yoksa o dal hic kosulmuyordu.
-        input_data    := load_csv(input_dc_csv,    bit_width => C_DATA_WIDTH);
+        input_data    := load_csv(input_dc_csv, bit_width    => C_DATA_WIDTH);
         expected_data := load_csv(expected_dc_csv, bit_width => C_DATA_WIDTH);
 
         reset_dut;
         feed_range(0, length(input_data) - 1);
         drain;
         check_all_compared;
+        save_csv(captured, output_path(runner_cfg) & "output.csv");
 
         -- Sarma olsaydi cikis tepede aniden negatife donerdi.
         check_equal(
-          to_integer(signed(y_out)),
-          Q15_MAX,
-          "tam olcek DC'de cikis doymadi (sarma olabilir)"
+        to_integer(signed(y_out)),
+        Q15_MAX,
+        "tam olcek DC'de cikis doymadi (sarma olabilir)"
         );
 
       end if;
@@ -217,8 +220,6 @@ begin
 
     test_runner_cleanup(runner);
   end process main;
-
-
   monitor : process
     variable cyc : natural := 0;
   begin
@@ -226,16 +227,14 @@ begin
 
     if cyc < MONITOR_CYCLES then
       info("cyc=" & to_string(cyc) &
-           " vi=" & to_string(valid_in) &
-           " x="  & to_string(to_integer(signed(x_in))) &
-           " vo=" & to_string(valid_out) &
-           " y="  & to_string(to_integer(signed(y_out))));
+      " vi=" & to_string(valid_in) &
+      " x=" & to_string(to_integer(signed(x_in))) &
+      " vo=" & to_string(valid_out) &
+      " y=" & to_string(to_integer(signed(y_out))));
     end if;
 
     cyc := cyc + 1;
   end process monitor;
-
-
   test_runner_watchdog(runner, 1 ms);
 
 end architecture bench;

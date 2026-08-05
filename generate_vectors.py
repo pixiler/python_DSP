@@ -15,12 +15,13 @@ simulatorun zaman damgasi kontrolu gereksiz "yeniden analiz et" uyarisi verir.
 Gorev tanimi: docs/hafta6_gorev6_vunit.md — Bolum 3.1
 """
 
+import json
 import warnings
 from pathlib import Path
 
 import numpy as np
 
-from dsp import apply_filter, fir1, sine_wave
+from dsp import apply_filter, fir1, sine_wave, suppression_db
 
 ROOT = Path(__file__).parent
 VECTORS = ROOT / "vectors"
@@ -29,6 +30,9 @@ HDL_SRC = ROOT / "hdl" / "src"
 FS = 50_000
 CUTOFF_HZ = 2_000.0
 NUMTAPS = 16  # fir1 cift dereceyi tek yapar -> 17 katsayi
+
+skip_samples = 50
+analysis_len = 450
 
 PASS_TONE_HZ = 1_000.0  # gecmesi beklenen ton
 STOP_TONE_HZ = 10_000.0  # bastirilmasi beklenen ton
@@ -179,9 +183,25 @@ def main() -> None:
     save_vector(VECTORS / "input_dc.csv", x_dc)
     save_vector(VECTORS / "expected_dc.csv", y_dc)
 
+    expected_passband_db  = suppression_db(y=from_q15(y_fix[skip_samples:analysis_len+skip_samples]), x=from_q15(x_fix[skip_samples:analysis_len+skip_samples]), fs= FS, tone_hz=PASS_TONE_HZ)
+    expected_stopband_db  = suppression_db(y=from_q15(y_fix[skip_samples:analysis_len+skip_samples]), x=from_q15(x_fix[skip_samples:analysis_len+skip_samples]), fs= FS, tone_hz=STOP_TONE_HZ)
+
     pkg_written = write_if_changed(
         HDL_SRC / "fir_coeffs_pkg.vhd", render_coeffs_package(h_fix)
     )
+
+    meta = {
+    "fs": FS,
+    "pass_tone_hz": PASS_TONE_HZ,
+    "stop_tone_hz": STOP_TONE_HZ,
+    "num_taps": len(h_fix),
+    "group_delay": (len(h_fix) - 1) // 2,
+    "skip_samples": skip_samples,          # transient + koherentlik icin
+    "analysis_len": analysis_len,         # tam periyot sayisi
+    "expected_passband_db": expected_passband_db,
+    "expected_stopband_db": expected_stopband_db,
+    }
+    json_written = write_if_changed(VECTORS / "meta.json", json.dumps(meta, indent=2))
 
     # --- Ozet -------------------------------------------------------------
     print(f"tap sayisi         : {len(h_fix)}")
@@ -191,7 +211,7 @@ def main() -> None:
     print(f"ana vektor         : {n} ornek, cikis tepesi {int(np.max(np.abs(y_fix[:n])))}")
     print(f"dc vektoru         : {DC_VECTOR_LEN} ornek, cikis {int(y_dc[-1])} (doygunluk {Q15_MAX})")
     print(f"katsayi paketi     : {'yazildi' if pkg_written else 'degismedi, atlandi'}")
-
+    print(f"meta paketi        : {'yazildi' if json_written else 'degismedi, atlandi'}")
 
 if __name__ == "__main__":
     main()
