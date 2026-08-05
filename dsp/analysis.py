@@ -96,10 +96,6 @@ def rms(x: np.ndarray) -> float:
     """
     return float(np.sqrt(np.mean(x**2)))
 
-
-
-
-
 def tone_amplitude(x: np.ndarray, fs: float, tone_hz: float) -> float:
     """Koherent orneklenmis bir sinyalde tek bir tonun tepe genligi.
 
