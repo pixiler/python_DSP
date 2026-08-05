@@ -21,8 +21,11 @@ entity fir_filter is
     generic (
         DATA_WIDTH : integer := 16;            -- Giris/cikis genisligi (Q1.15)
         COEF_WIDTH : integer := 16;            -- Katsayi genisligi (Q1.15)
-        NUM_TAPS   : integer := FIR_NUM_TAPS;
-        COEFFS     : coef_array_type(0 to FIR_NUM_TAPS - 1) := FIR_COEFFS
+        -- COEFFS araligi NUM_TAPS'a bagli: ayni entity farkli tap sayilariyla
+        -- kurulabiliyor. Varsayilanlar katsayi paketinin varsayilan setinden.
+        NUM_TAPS   : integer := FIR_TAP_COUNTS(FIR_DEFAULT_CONFIG);
+        COEFFS     : coef_array_type(0 to NUM_TAPS - 1) :=
+            FIR_COEFF_SETS(FIR_DEFAULT_CONFIG)(0 to NUM_TAPS - 1)
     );
     port (
         clk       : in  std_logic;
