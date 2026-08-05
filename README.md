@@ -59,6 +59,10 @@ python generate_vectors.py
 
 ## Gereksinimler
 
+- python generate_vectors.py   # once: katsayi paketi + test vektorleri
+- python run.py -v             # sonra: VHDL testleri
+
 - Python 3.11+, `numpy`, `scipy`, `matplotlib`, `pytest`, `pytest-cov`
 - `vunit_hdl` (Hafta 6)
 - Bir VHDL simülatörü: NVC veya GHDL — `PATH`'te olmalı (`nvc --version`)
+

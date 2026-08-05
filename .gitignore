@@ -188,3 +188,5 @@ vunit_out/
 
 # Uretilen test vektorleri (generate_vectors.py ile yeniden uretilir)
 vectors/*.csv
+hdl/src/fir_coeffs_pkg.vhd
+vhdl_ls.toml
