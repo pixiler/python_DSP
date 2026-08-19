@@ -98,7 +98,8 @@ def make_spectrum_check(manifest: dict, cfg: dict):
 def add_project_sources(vu):
     """Kutuphaneleri, kaynaklari, generic'leri ve konfigurasyonlari ekle."""
     vu.add_vhdl_builtins()
-
+    vu.add_verification_components()   # <-- VC'ler bunsuz derlenmez
+    
     lib = vu.add_library("lib")
     lib.add_source_files(ROOT / "hdl" / "src" / "*.vhd")
     lib.add_source_files(ROOT / "hdl" / "tb" / "*.vhd")
@@ -125,6 +126,21 @@ def add_project_sources(vu):
                 "expected_csv": (VECTORS / cfg["expected_csv"]).as_posix(),
             },
             post_check=make_spectrum_check(manifest, cfg),
+        )
+
+    skid_tb = lib.test_bench("tb_axis_skid_buffer_vc")
+    veri_testi = skid_tb.test("veri_butunlugu")
+    for name, m_prob, s_prob in [
+        ("kesintisiz",  0.0, 0.0),
+        ("hafif_stall", 0.2, 0.2),
+        ("agir_stall",  0.6, 0.8),
+    ]:
+        veri_testi.add_config(
+            name=name,
+            generics={
+                "g_master_stall_prob": m_prob,
+                "g_slave_stall_prob": s_prob,
+            },
         )
 
     return lib
