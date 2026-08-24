@@ -2,11 +2,13 @@ standard = "2008"
 
 [libraries]
 lib.files = [
+    'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/rb_mapper.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/fir_pkg.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/fir_coeffs_pkg.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/fir_filter.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/counter.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/src/axis_skid_buffer.vhd',
+    'E:/WorkSpace/python/data_analysis/python_DSP/hdl/tb/tb_rb_mapper .vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/tb/tb_fir_filter.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/tb/tb_counter.vhd',
     'E:/WorkSpace/python/data_analysis/python_DSP/hdl/tb/tb_axis_skid_buffer.vhd',
